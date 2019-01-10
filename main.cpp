@@ -23,10 +23,8 @@ void safeRun(std::string const &taskName, int intraTaskLag)
     terminate::thread::threadMap[taskName] = std::thread([&, intraTaskLag, taskName]()
                                                          {
                                                              int counter = 0;
-
-                                                             while ((counter < 30) &&
-                                                                    ::terminate::thread::futureObj.wait_for(
-                                                                            std::chrono::milliseconds(1)) ==
+                                                             while (::terminate::thread::futureObj.wait_for(
+                                                                     std::chrono::milliseconds(1)) ==
                                                                     std::future_status::timeout)
                                                              {
                                                                  std::this_thread::sleep_for(
@@ -42,8 +40,7 @@ void safeRun(std::string const &taskName, int intraTaskLag)
 
 void safeJoin(std::string const &taskName)
 {
-    std::this_thread::sleep_for(std::chrono::seconds(10));
-    std::cout << "Asking Thread to Stop" << std::endl;
+    std::cout << "Asking `" << taskName << "' thread to stop" << std::endl;
 
     //Set the value in promise
     ::terminate::thread::exitSignal.set_value();
@@ -52,25 +49,18 @@ void safeJoin(std::string const &taskName)
     ::terminate::thread::exitSignal = std::promise<void>();
     ::terminate::thread::futureObj = ::terminate::thread::exitSignal.get_future();
 
-    std::cout << "Exiting `" << taskName << "' Function" << std::endl;
-}
-
-void doSmallStuffWaitAndAskForStop()
-{
-    safeRun("small", 1);
-    safeJoin("small");
-}
-
-void doBigStuffWaitAndAskForStop()
-{
-    safeRun("big", 3);
-    safeJoin("big");
+    std::cout << "Exiting `" << taskName << "' thread" << std::endl;
 }
 
 int main()
 {
-    doSmallStuffWaitAndAskForStop();
-    doBigStuffWaitAndAskForStop();
+    safeRun("small", 1);
+    safeRun("big", 3);
+
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+
+    safeJoin("small");
+    safeJoin("big");
 
     return 0;
 }
